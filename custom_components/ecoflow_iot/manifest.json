@@ -1,13 +1,22 @@
 {
   "domain": "ecoflow_iot",
   "name": "EcoFlow IoT",
-  "after_dependencies": ["recorder", "lovelace"],
-  "codeowners": ["@MichelFR"],
+  "after_dependencies": [
+    "recorder",
+    "lovelace"
+  ],
+  "codeowners": [
+    "@MichelFR"
+  ],
   "config_flow": true,
-  "dependencies": ["http"],
+  "dependencies": [
+    "http"
+  ],
   "documentation": "https://github.com/MichelFR/ha-ecoflow-iot",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/MichelFR/ha-ecoflow-iot/issues",
-  "loggers": ["paho"],
-  "version": "0.44.15"
+  "loggers": [
+    "paho"
+  ],
+  "version": "0.44.16"
 }

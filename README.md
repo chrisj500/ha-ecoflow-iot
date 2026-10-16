@@ -437,3 +437,13 @@ or identify devices with an unknown serial.
 Not affiliated with or endorsed by EcoFlow. Device definitions are generated from the
 official EcoFlow developer documentation (quota schemas + set-commands); some
 per-firmware fields, units, or command parameters may still need on-device verification.
+
+### SHP2 circuit metadata
+
+Circuit power sensors expose `circuit_number`, `circuit_name`, `split_phase`,
+`paired_circuit`, and `circuit_numbers` from the app's live quota metadata.
+A confirmed reciprocal split-phase pair shares the lower-numbered circuit's app
+name. Sensor IDs and per-leg power values remain unchanged: consumers should
+sum both members once to display a combined load. Missing or inconsistent
+pairing data leaves the circuit independent. Names update with coordinator data.
+
