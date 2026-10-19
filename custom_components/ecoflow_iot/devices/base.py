@@ -78,13 +78,13 @@ class _EcoFlowDescription:
     # Computes a dynamic icon from the full quota map (e.g. a charging battery);
     # returns None to fall back to the static/automatic device-class icon.
     icon_fn: Callable[[Mapping[str, Any]], str | None] | None = None
+    # Computes additional state attributes from the full quota map.
+    attributes_fn: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
 class EcoFlowSensorEntityDescription(_EcoFlowDescription, SensorEntityDescription):
     """Describes a read-only sensor."""
-
-    attributes_fn: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None
 
 
 # Given the full quota map, return the instantaneous power (in W) to integrate,

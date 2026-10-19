@@ -257,11 +257,22 @@ def _circuit_metadata(quota: Mapping[str, Any], circuit: int) -> dict[str, Any]:
     linked = partner(circuit)
     paired = linked is not None and partner(linked) == circuit
     members = sorted([circuit, linked]) if paired else [circuit]
-    raw_name = _circuit_field(quota, members[0], "chName")
-    name = raw_name.strip().strip("\x00").strip() if isinstance(raw_name, str) else ""
+    name = ""
+    for member in members:
+        raw_name = _circuit_field(quota, member, "chName")
+        candidate = (
+            raw_name.strip().strip("\x00").strip()
+            if isinstance(raw_name, str)
+            else ""
+        )
+        if candidate and candidate.casefold() != f"Circuit {member}".casefold():
+            name = candidate
+            break
+    if not name:
+        name = f"Circuit {members[0]}"
     return {
         "circuit_number": circuit,
-        "circuit_name": name or f"Circuit {members[0]}",
+        "circuit_name": name,
         "split_phase": paired,
         "paired_circuit": linked if paired else None,
         "circuit_numbers": members,
@@ -293,6 +304,7 @@ def _circuit_sensors(count: int = _CIRCUIT_COUNT) -> tuple[EcoFlowSensorEntityDe
         descs.append(
             EcoFlowSensorEntityDescription(
                 key=f"circuit_{i}_set_amp",
+                attributes_fn=lambda q, _i=i: _circuit_metadata(q, _i),
                 mqtt_key=f"loadIncreInfo.hall1IncreInfo.ch{i}Info.setAmp",
                 name=f"Circuit {i} max current",
                 device_class=SensorDeviceClass.CURRENT,
@@ -479,6 +491,7 @@ def _circuit_amp_numbers(count: int = _CIRCUIT_COUNT) -> tuple[EcoFlowNumberEnti
         descs.append(
             EcoFlowNumberEntityDescription(
                 key=f"circuit_{i}_max_amp",
+                attributes_fn=lambda q, _i=i: _circuit_metadata(q, _i),
                 mqtt_key=quota_key,
                 name=f"Circuit {i} max current",
                 device_class=NumberDeviceClass.CURRENT,
