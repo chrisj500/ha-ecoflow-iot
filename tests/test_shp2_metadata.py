@@ -93,15 +93,38 @@ def test_invalid_pairing_falls_back_to_single_leg() -> None:
         assert _circuit_metadata(quota, 6)["circuit_numbers"] == [6]
 
 
-def test_nested_metadata_remains_supported() -> None:
-    quota: dict[str, object] = {
-        "pd303_mc": {
-            "loadIncreInfo": {
-                "hall1IncreInfo": {"ch1Info": {"chName": " Office "}}
+def test_unprefixed_http_and_nested_metadata_remain_supported() -> None:
+    flat_http_quota = {
+        key.removeprefix("pd303_mc."): value
+        for key, value in make_flat_quota(1, 2, "Office").items()
+    }
+    assert _circuit_metadata(flat_http_quota, 1)["circuit_name"] == "Office"
+
+    nested_http_quota: dict[str, object] = {
+        "loadIncreInfo": {
+            "hall1IncreInfo": {
+                "ch1Info": {
+                    "chName": " Office ",
+                    "splitphase": {"linkMark": True, "linkCh": 2},
+                },
+                "ch2Info": {
+                    "chName": "Circuit 2",
+                    "splitphase": {"linkMark": True, "linkCh": 1},
+                },
             }
         }
     }
-    assert _circuit_metadata(quota, 1)["circuit_name"] == "Office"
+    assert _circuit_metadata(nested_http_quota, 1)["circuit_name"] == "Office"
+    assert _circuit_metadata(nested_http_quota, 1)["circuit_numbers"] == [1, 2]
+
+    nested_prefixed_quota: dict[str, object] = {
+        "pd303_mc": {
+            "loadIncreInfo": {
+                "hall1IncreInfo": {"ch1Info": {"chName": "Office"}}
+            }
+        }
+    }
+    assert _circuit_metadata(nested_prefixed_quota, 1)["circuit_name"] == "Office"
 
 
 class SensorProbe(EcoFlowSensor):
@@ -161,7 +184,7 @@ def run_tests() -> None:
     test_prefixed_metadata_and_unprefixed_power_match_diagnostic_shape()
     test_metadata_updates_and_entity_identity_remains_per_leg()
     test_invalid_pairing_falls_back_to_single_leg()
-    test_nested_metadata_remains_supported()
+    test_unprefixed_http_and_nested_metadata_remain_supported()
     test_all_per_circuit_entities_share_metadata_attributes()
 
 
