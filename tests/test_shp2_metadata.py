@@ -23,16 +23,26 @@ def make_flat_quota(
 ) -> dict[str, object]:
     """Build a redacted quota shape seen in SHP2 diagnostics."""
     root = "pd303_mc.loadIncreInfo.hall1IncreInfo."
-    return {
+    resolved_second_name = (
+        second_name if second_name is not None else f"Circuit {second_circuit}"
+    )
+    quota = {
         f"{root}ch{first_circuit}Info.chName": first_name,
         f"{root}ch{first_circuit}Info.splitphase.linkMark": True,
         f"{root}ch{first_circuit}Info.splitphase.linkCh": second_circuit,
-        f"{root}ch{second_circuit}Info.chName": (
-            second_name if second_name is not None else f"Circuit {second_circuit}"
-        ),
+        f"{root}ch{first_circuit}Info.setAmp": 50,
+        f"{root}ch{second_circuit}Info.chName": resolved_second_name,
         f"{root}ch{second_circuit}Info.splitphase.linkMark": True,
         f"{root}ch{second_circuit}Info.splitphase.linkCh": first_circuit,
+        f"{root}ch{second_circuit}Info.setAmp": 50,
+        f"loadIncreInfo.hall1IncreInfo.ch{first_circuit}Info.chName": first_name,
+        f"loadIncreInfo.hall1IncreInfo.ch{first_circuit}Info.setAmp": 50,
+        f"loadIncreInfo.hall1IncreInfo.ch{second_circuit}Info.chName": (
+            resolved_second_name
+        ),
+        f"loadIncreInfo.hall1IncreInfo.ch{second_circuit}Info.setAmp": 50,
     }
+    return quota
 
 
 def test_split_phase_pair_uses_first_custom_label_from_either_leg() -> None:
@@ -55,10 +65,11 @@ def test_default_names_fall_back_to_lower_circuit_number() -> None:
 
 
 def test_prefixed_metadata_and_unprefixed_power_match_diagnostic_shape() -> None:
-    """Metadata and live readings occupy distinct quota paths in HA diagnostics."""
+    """Match the diagnostic's duplicated labels and separate live power field."""
     quota = make_flat_quota(6, 8, "Air Conditioner")
-    # Redacted SHP2 diagnostics place incremental channel metadata below
-    # pd303_mc, while the per-leg power array is a separate top-level field.
+    # The diagnostic quota contains both pd303_mc-prefixed and unprefixed
+    # chName/setAmp fields. Split-phase metadata is prefixed; live power is a
+    # separate top-level array. Circuit labels and readings here are test data.
     quota["loadInfo.hall1Watt"] = [
         0, 0, 0, 0, 0, 100, 0, 120, 0, 0, 0, 0
     ]
@@ -68,6 +79,14 @@ def test_prefixed_metadata_and_unprefixed_power_match_diagnostic_shape() -> None
     )
     assert sensor.native_value == 100
     assert sensor.extra_state_attributes["circuit_numbers"] == [6, 8]
+    for circuit in (6, 8):
+        channel = f"ch{circuit}Info"
+        assert quota[f"pd303_mc.loadIncreInfo.hall1IncreInfo.{channel}.chName"] == (
+            quota[f"loadIncreInfo.hall1IncreInfo.{channel}.chName"]
+        )
+        assert quota[f"pd303_mc.loadIncreInfo.hall1IncreInfo.{channel}.setAmp"] == (
+            quota[f"loadIncreInfo.hall1IncreInfo.{channel}.setAmp"]
+        )
 
 
 def test_metadata_updates_and_entity_identity_remains_per_leg() -> None:
@@ -94,9 +113,8 @@ def test_invalid_pairing_falls_back_to_single_leg() -> None:
 
 
 def test_unprefixed_http_and_nested_metadata_remain_supported() -> None:
-    flat_http_quota = {
-        key.removeprefix("pd303_mc."): value
-        for key, value in make_flat_quota(1, 2, "Office").items()
+    flat_http_quota: dict[str, object] = {
+        "loadIncreInfo.hall1IncreInfo.ch1Info.chName": "Office",
     }
     assert _circuit_metadata(flat_http_quota, 1)["circuit_name"] == "Office"
 
